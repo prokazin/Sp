@@ -1,14 +1,12 @@
 // ============================================================
-// АВТОПОСТИНГ И ОТВЕТЫ НА КОММЕНТАРИИ (POLLINATIONS AI)
+// АВТОПОСТИНГ И ОТВЕТЫ НА КОММЕНТАРИИ (KEYLESSAI)
 // ============================================================
 
 export default {
-  // 1. Блок расписания (Cron Trigger)
   async scheduled(event, env, ctx) {
     const now = new Date();
     const hour = now.getUTCHours(); 
     
-    // Жесткая привязка к часам, чтобы избежать спама при частых запусках
     let postType = '';
     if (hour === 5) postType = 'text';
     else if (hour === 10) postType = 'poll';
@@ -19,11 +17,9 @@ export default {
     ctx.waitUntil(generateAndPost(env, postType));
   },
   
-  // 2. Блок для приема запросов
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     
-    // ЗАЩИТА ОТ СПАМА: Пост отправится только если в ссылке есть ?test=true
     if (request.method === 'GET') {
       if (url.searchParams.get('test') === 'true') {
         try {
@@ -36,19 +32,12 @@ export default {
       return new Response("Бот работает в фоновом режиме. Для теста добавь в ссылку ?test=true", { status: 200 });
     }
     
-    // Обработка комментариев от Telegram
     if (request.method === 'POST') {
       try {
         const update = await request.json();
-        
-        // Если это сообщение в группе, и это не бот
         if (update.message && update.message.text && !update.message.from.is_bot) {
-          const text = update.message.text;
-          const userName = update.message.from.first_name;
-          const chatId = update.message.chat.id;
-          const messageId = update.message.message_id;
-          
-          ctx.waitUntil(generateReply(env, text, userName, chatId, messageId));
+          const { text, from, chat, message_id } = update.message;
+          ctx.waitUntil(generateReply(env, text, from.first_name, chat.id, message_id));
         }
       } catch (e) {
         console.log("Ошибка при чтении вебхука:", e);
@@ -85,14 +74,15 @@ async function generateAndPost(env, postType) {
     prompt = `Напиши короткую мысль-подводку от лица персонажа: ${chosenCharacter}. 1-2 предложения. Верни СТРОГО JSON: {"quote": "..."}`;
   }
   
-  // Запрос к Pollinations AI (без ключа)
-  const aiResponse = await fetch("https://text.pollinations.ai/openai", {
+  // Запрос к KeylessAI (ключ не нужен)
+  const aiResponse = await fetch("https://keylessai.thryx.workers.dev/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "Authorization": "Bearer not-needed"
     },
     body: JSON.stringify({
-      model: "openai",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: `Ты — админ канала "Южный Парк". Ты дерзкий, используешь черный юмор. 
 ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни ответ СТРОГО в JSON-формате: {"quote": "..."} или {"question": "...", "options": [...]}.` },
@@ -104,7 +94,7 @@ async function generateAndPost(env, postType) {
   });
   
   const aiData = await aiResponse.json();
-  if (!aiData.choices) throw new Error("Ошибка Pollinations AI: " + JSON.stringify(aiData));
+  if (!aiData.choices) throw new Error("Ошибка KeylessAI: " + JSON.stringify(aiData));
   const content = JSON.parse(aiData.choices[0].message.content);
   
   if (postType === 'poll') {
@@ -138,13 +128,14 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
 Ответ должен быть остроумным, по делу, в стиле персонажа (1-3 предложения).
 Верни СТРОГО JSON: {"reply": "текст твоего ответа"}`;
 
-  const aiResponse = await fetch("https://text.pollinations.ai/openai", {
+  const aiResponse = await fetch("https://keylessai.thryx.workers.dev/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "Authorization": "Bearer not-needed"
     },
     body: JSON.stringify({
-      model: "openai",
+      model: "gpt-4o",
       messages: [
         { role: "system", content: `Ты — персонаж из "Южного Парка". Отвечай коротко, дерзко, но по смыслу комментария. 
 ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни СТРОГО JSON: {"reply": "..."}.` },
@@ -159,7 +150,6 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
   if (!aiData.choices) return; 
 
   const content = JSON.parse(aiData.choices[0].message.content);
-  
   const formattedReply = `<b>${chosenCharacter}:</b>\n<blockquote>${content.reply}</blockquote>`;
 
   await fetch(`${TG_API}/sendMessage`, {
