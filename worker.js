@@ -1,5 +1,5 @@
 // ============================================================
-// АВТОПОСТИНГ И ОТВЕТЫ НА КОММЕНТАРИИ (TELEGRAM-КАНАЛ "ЮЖНЫЙ ПАРК")
+// АВТОПОСТИНГ И ОТВЕТЫ НА КОММЕНТАРИИ (С ЗАЩИТОЙ ОТ СПАМА)
 // ============================================================
 
 export default {
@@ -8,50 +8,51 @@ export default {
     const now = new Date();
     const hour = now.getUTCHours(); 
     
+    // Жесткая привязка к часам, чтобы избежать спама при частых запусках
     let postType = '';
-    if (hour >= 5 && hour < 8) postType = 'text';
-    else if (hour >= 10 && hour < 13) postType = 'poll';
-    else if (hour >= 15 && hour < 18) postType = 'joke';
-    else if (hour >= 18 && hour < 21) postType = 'text';
+    if (hour === 5) postType = 'text';
+    else if (hour === 10) postType = 'poll';
+    else if (hour === 15) postType = 'joke';
+    else if (hour === 18) postType = 'text';
     else return; 
     
     ctx.waitUntil(generateAndPost(env, postType));
   },
   
-  // 2. Блок для приема запросов (Тесты из браузера и Комментарии из Telegram)
+  // 2. Блок для приема запросов
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     
-    // Если ты просто открыл ссылку в браузере (GET) — отправляем тестовый пост в канал
+    // ЗАЩИТА ОТ СПАМА: Пост отправится только если в ссылке есть ?test=true
     if (request.method === 'GET') {
-      try {
-        await generateAndPost(env, 'text');
-        return new Response("Тестовый пост успешно отправлен! Проверь канал.", { status: 200 });
-      } catch (e) {
-        return new Response("Ошибка: " + e.message, { status: 500 });
+      if (url.searchParams.get('test') === 'true') {
+        try {
+          await generateAndPost(env, 'text');
+          return new Response("Тестовый пост успешно отправлен!", { status: 200 });
+        } catch (e) {
+          return new Response("Ошибка: " + e.message, { status: 500 });
+        }
       }
+      return new Response("Бот работает в фоновом режиме. Для теста добавь в ссылку ?test=true", { status: 200 });
     }
     
-    // Если Telegram прислал обновление (POST) — значит, кто-то написал комментарий
+    // Обработка комментариев от Telegram
     if (request.method === 'POST') {
       try {
         const update = await request.json();
         
-        // Проверяем: есть ли текст, и не написал ли это сам бот (чтобы не было вечного цикла)
+        // Если это сообщение в группе, и это не бот
         if (update.message && update.message.text && !update.message.from.is_bot) {
           const text = update.message.text;
           const userName = update.message.from.first_name;
           const chatId = update.message.chat.id;
           const messageId = update.message.message_id;
           
-          // Отвечаем в фоне, чтобы Telegram не ждал
           ctx.waitUntil(generateReply(env, text, userName, chatId, messageId));
         }
       } catch (e) {
         console.log("Ошибка при чтении вебхука:", e);
       }
-      
-      // Telegram всегда ждет ответ 200 OK, иначе он будет присылать уведомление снова
       return new Response("OK", { status: 200 });
     }
     
@@ -63,9 +64,9 @@ export default {
 // ФУНКЦИЯ ГЕНЕРАЦИИ ПОСТОВ В КАНАЛ
 // ============================================================
 async function generateAndPost(env, postType) {
-  const TELEGRAM_BOT_TOKEN = "8937064578:AAHuY-2CIFWOyhhkReIPmp98e3d4gw_-wTU";
+  const TELEGRAM_BOT_TOKEN = "ТВОЙ_ТОКЕН_БОТА";
   const TELEGRAM_CHANNEL_ID = "-1004389745995";
-  const GROQ_API_KEY = "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";
+  const GROQ_API_KEY = "ВСТАВЬ_СЮДА_КЛЮЧ";
 
   const TG_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
   
@@ -90,11 +91,10 @@ async function generateAndPost(env, postType) {
       "X-Title": "South Park Bot"
     },
     body: JSON.stringify({
-      model: "openrouter/free",
+      model: "google/gemma-2-9b-it:free",
       messages: [
-        { role: "system", content: `Ты — админ канала0 "Южный Парк". Ты]. дерзmessageкий,.content используешь черный юмор. 
-В);
-ерни ответ СТРОГО в JSON-формате: {"quote": "..."} или {"question": "...", "options": [...]}.` },
+        { role: "system", content: `Ты — админ канала "Южный Парк". Ты дерзкий, используешь черный юмор. 
+ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни ответ СТРОГО в JSON-формате: {"quote": "..."} или {"question": "...", "options": [...]}.` },
         { role: "user", content: prompt }
       ],
       temperature: 0.9,
@@ -104,7 +104,8 @@ async function generateAndPost(env, postType) {
   
   const groqData = await groqResponse.json();
   if (!groqData.choices) throw new Error("Ошибка OpenRouter: " + JSON.stringify(groqData));
-  const content = JSON.parse(groqData.choices[  
+  const content = JSON.parse(groqData.choices[0].message.content);
+  
   if (postType === 'poll') {
     await fetch(`${TG_API}/sendPoll`, {
       method: "POST",
@@ -125,17 +126,16 @@ async function generateAndPost(env, postType) {
 // ФУНКЦИЯ ОТВЕТА НА КОММЕНТАРИИ
 // ============================================================
 async function generateReply(env, userComment, userName, chatId, replyToMessageId) {
-  const TELEGRAM_BOT_TOKEN = "8937064578:AAHuY-2CIFWOyhhkReIPmp98e3d4gw_-wTU";
-  const GROQ_API_KEY = "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";
+  const TELEGRAM_BOT_TOKEN = "ТВОЙ_ТОКЕН_БОТА";
+  const GROQ_API_KEY = "ВСТАВЬ_СЮДА_КЛЮЧ";
   const TG_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 
   const characters = ["Эрик Картман", "Кенни Маккормик", "Стэн Марш", "Кайл Брофловски", "Баттерс Стотч", "Рэнди Марш", "Мистер Гаррисон", "Шеф"];
   const chosenCharacter = characters[Math.floor(Math.random() * characters.length)];
 
-  // Просим ИИ адекватно ответить на комментарий
   const prompt = `Пользователь по имени ${userName} написал комментарий: "${userComment}".
 Ответь ему от лица персонажа: ${chosenCharacter}. 
-Ответ должен быть остроумным, по делу, в стиле персонажа (1-3 предложения). Не пиши банальности.
+Ответ должен быть остроумным, по делу, в стиле персонажа (1-3 предложения).
 Верни СТРОГО JSON: {"reply": "текст твоего ответа"}`;
 
   const groqResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -147,9 +147,10 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
       "X-Title": "South Park Bot"
     },
     body: JSON.stringify({
-      model: "openrouter/free",
+      model: "google/gemma-2-9b-it:free",
       messages: [
-        { role: "system", content: `Ты — персонаж из "Южного Парка". Отвечай коротко, дерзко, но по смыслу комментария. Верни СТРОГО JSON: {"reply": "..."}.` },
+        { role: "system", content: `Ты — персонаж из "Южного Парка". Отвечай коротко, дерзко, но по смыслу комментария. 
+ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни СТРОГО JSON: {"reply": "..."}.` },
         { role: "user", content: prompt }
       ],
       temperature: 0.9,
@@ -158,14 +159,12 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
   });
 
   const groqData = await groqResponse.json();
-  if (!groqData.choices) return; // Если ошибка ИИ, просто молчим
+  if (!groqData.choices) return; 
 
   const content = JSON.parse(groqData.choices[0].message.content);
   
-  // Форматируем красивый ответ с упоминанием пользователя
   const formattedReply = `<b>${chosenCharacter}:</b>\n<blockquote>${content.reply}</blockquote>`;
 
-  // Отправляем ответ в группу (reply_to_message_id делает так, чтобы ответ прикрепился к комментарию)
   await fetch(`${TG_API}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
