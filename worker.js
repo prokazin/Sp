@@ -91,7 +91,7 @@ async function generateAndPost(env, postType) {
       "X-Title": "South Park Bot"
     },
     body: JSON.stringify({
-      model: "google/gemma-2-9b-it:free",
+      model: "openrouter/free",
       messages: [
         { role: "system", content: `Ты — админ канала "Южный Парк". Ты дерзкий, используешь черный юмор. 
 ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни ответ СТРОГО в JSON-формате: {"quote": "..."} или {"question": "...", "options": [...]}.` },
@@ -147,7 +147,7 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
       "X-Title": "South Park Bot"
     },
     body: JSON.stringify({
-      model: "google/gemma-2-9b-it:free",
+      model: "openrouter/free",
       messages: [
         { role: "system", content: `Ты — персонаж из "Южного Парка". Отвечай коротко, дерзко, но по смыслу комментария. 
 ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни СТРОГО JSON: {"reply": "..."}.` },
