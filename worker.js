@@ -66,7 +66,7 @@ async function generateAndPost(env, postType) {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       messages: [
         { role: "system", content: `Ты — админ Telegram-канала с нарезками из "Южного Парка" (South Park). 
 Ты дерзкий, умный, используешь черный юмор и сатиру, как в самом сериале. 
@@ -99,7 +99,7 @@ async function generateAndPost(env, postType) {
   
   const groqData = await groqResponse.json();
 
-  // НОВАЯ ПРОВЕРКА: Если Groq вернул ошибку, мы ее покажем
+  // Проверка: Если Groq вернул ошибку, мы ее покажем
   if (!groqData.choices) {
     throw new Error("Ошибка от Groq AI: " + JSON.stringify(groqData));
   }
