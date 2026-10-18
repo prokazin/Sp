@@ -8,15 +8,14 @@ export default {
     const now = new Date();
     const hour = now.getUTCHours(); // Время по Гринвичу (0-23)
     
-    // Логика строго под расписание "0 5,10,15,18 * * *"
+    // Защита от задержек Cloudflare: используем диапазоны часов
     let postType = '';
-    if (hour === 5) postType = 'text';       // 08:00 по МСК (Утренняя мысль)
-    else if (hour === 10) postType = 'poll'; // 13:00 по МСК (Обеденный опрос)
-    else if (hour === 15) postType = 'joke'; // 18:00 по МСК (Вечерняя шутка)
-    else if (hour === 18) postType = 'text'; // 21:00 по МСК (Ночная мысль)
-    else return; // Если запуск вне этих часов, бот "спит"
+    if (hour >= 5 && hour < 8) postType = 'text';       // 08:00 по МСК (Утренняя мысль)
+    else if (hour >= 10 && hour < 13) postType = 'poll'; // 13:00 по МСК (Обеденный опрос)
+    else if (hour >= 15 && hour < 18) postType = 'joke'; // 18:00 по МСК (Вечерняя шутка)
+    else if (hour >= 18 && hour < 21) postType = 'text'; // 21:00 по МСК (Ночная мысль)
+    else return; // Если запуск ночью, бот "спит"
     
-    // Запускаем отправку
     ctx.waitUntil(generateAndPost(env, postType));
   },
   
@@ -39,9 +38,9 @@ async function generateAndPost(env, postType) {
   // ==========================================================
   // ВНИМАНИЕ! ВСТАВЬ СВОИ ДАННЫЕ В ТРИ СТРОКИ НИЖЕ:
   // ==========================================================
-  const TELEGRAM_BOT_TOKEN = "ТВОЙ_ТОКЕН_БОТА";
+  const TELEGRAM_BOT_TOKEN = "8937064578:AAHuY-2CIFWOyhhkReIPmp98e3d4gw_-wTU";
   const TELEGRAM_CHANNEL_ID = "-1004389745995";
-  const GROQ_API_KEY = "ВСТАВЬ_СЮДА_КЛЮЧ";
+  const GROQ_API_KEY = "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";
   // ==========================================================
 
   const TG_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
