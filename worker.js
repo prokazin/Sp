@@ -1,12 +1,14 @@
 // ============================================================
-// АВТОПОСТИНГ И ОТВЕТЫ НА КОММЕНТАРИИ (KEYLESSAI)
+// АВТОПОСТИНГ И ОТВЕТЫ НА КОММЕНТАРИИ (KILO GATEWAY)
 // ============================================================
 
 export default {
+  // 1. Блок расписания (Cron Trigger)
   async scheduled(event, env, ctx) {
     const now = new Date();
     const hour = now.getUTCHours(); 
     
+    // Жесткая привязка к часам, чтобы избежать спама при частых запусках
     let postType = '';
     if (hour === 5) postType = 'text';
     else if (hour === 10) postType = 'poll';
@@ -17,9 +19,11 @@ export default {
     ctx.waitUntil(generateAndPost(env, postType));
   },
   
+  // 2. Блок для приема запросов
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     
+    // ЗАЩИТА ОТ СПАМА: Пост отправится только если в ссылке есть ?test=true
     if (request.method === 'GET') {
       if (url.searchParams.get('test') === 'true') {
         try {
@@ -32,12 +36,19 @@ export default {
       return new Response("Бот работает в фоновом режиме. Для теста добавь в ссылку ?test=true", { status: 200 });
     }
     
+    // Обработка комментариев от Telegram
     if (request.method === 'POST') {
       try {
         const update = await request.json();
+        
+        // Если это сообщение в группе, и это не бот
         if (update.message && update.message.text && !update.message.from.is_bot) {
-          const { text, from, chat, message_id } = update.message;
-          ctx.waitUntil(generateReply(env, text, from.first_name, chat.id, message_id));
+          const text = update.message.text;
+          const userName = update.message.from.first_name;
+          const chatId = update.message.chat.id;
+          const messageId = update.message.message_id;
+          
+          ctx.waitUntil(generateReply(env, text, userName, chatId, messageId));
         }
       } catch (e) {
         console.log("Ошибка при чтении вебхука:", e);
@@ -56,7 +67,7 @@ async function generateAndPost(env, postType) {
   // ==========================================================
   // ВНИМАНИЕ! ВСТАВЬ СВОИ ДАННЫЕ В ДВЕ СТРОКИ НИЖЕ:
   // ==========================================================
-  const TELEGRAM_BOT_TOKEN = "8937064578:AAHuY-2CIFWOyhhkReIPmp98e3d4gw_-wTU";
+  const TELEGRAM_BOT_TOKEN = "ТВОЙ_ТОКЕН_БОТА";
   const TELEGRAM_CHANNEL_ID = "-1004389745995";
   // ==========================================================
 
@@ -74,15 +85,15 @@ async function generateAndPost(env, postType) {
     prompt = `Напиши короткую мысль-подводку от лица персонажа: ${chosenCharacter}. 1-2 предложения. Верни СТРОГО JSON: {"quote": "..."}`;
   }
   
-  // Запрос к KeylessAI (ключ не нужен)
-  const aiResponse = await fetch("https://keylessai.thryx.workers.dev/v1/chat/completions", {
+  // Запрос к Kilo Gateway (ключ "anonymous")
+  const aiResponse = await fetch("https://api.kilo.ai/api/gateway/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": "Bearer not-needed"
+      "Authorization": "Bearer anonymous"
     },
     body: JSON.stringify({
-      model: "gpt-4o",
+      model: "kilo-auto/free",
       messages: [
         { role: "system", content: `Ты — админ канала "Южный Парк". Ты дерзкий, используешь черный юмор. 
 ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни ответ СТРОГО в JSON-формате: {"quote": "..."} или {"question": "...", "options": [...]}.` },
@@ -94,8 +105,13 @@ async function generateAndPost(env, postType) {
   });
   
   const aiData = await aiResponse.json();
-  if (!aiData.choices) throw new Error("Ошибка KeylessAI: " + JSON.stringify(aiData));
-  const content = JSON.parse(aiData.choices[0].message.content);
+  if (!aiData.choices) throw new Error("Ошибка Kilo Gateway: " + JSON.stringify(aiData));
+  
+  // Извлекаем JSON из ответа (Kilo Gateway может вернуть текст с оберткой)
+  const rawText = aiData.choices[0].message.content;
+  const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("Не удалось найти JSON в ответе: " + rawText);
+  const content = JSON.parse(jsonMatch[0]);
   
   if (postType === 'poll') {
     await fetch(`${TG_API}/sendPoll`, {
@@ -128,14 +144,14 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
 Ответ должен быть остроумным, по делу, в стиле персонажа (1-3 предложения).
 Верни СТРОГО JSON: {"reply": "текст твоего ответа"}`;
 
-  const aiResponse = await fetch("https://keylessai.thryx.workers.dev/v1/chat/completions", {
+  const aiResponse = await fetch("https://api.kilo.ai/api/gateway/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": "Bearer not-needed"
+      "Authorization": "Bearer anonymous"
     },
     body: JSON.stringify({
-      model: "gpt-4o",
+      model: "kilo-auto/free",
       messages: [
         { role: "system", content: `Ты — персонаж из "Южного Парка". Отвечай коротко, дерзко, но по смыслу комментария. 
 ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни СТРОГО JSON: {"reply": "..."}.` },
@@ -149,7 +165,11 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
   const aiData = await aiResponse.json();
   if (!aiData.choices) return; 
 
-  const content = JSON.parse(aiData.choices[0].message.content);
+  const rawText = aiData.choices[0].message.content;
+  const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return;
+  const content = JSON.parse(jsonMatch[0]);
+  
   const formattedReply = `<b>${chosenCharacter}:</b>\n<blockquote>${content.reply}</blockquote>`;
 
   await fetch(`${TG_API}/sendMessage`, {
