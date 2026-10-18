@@ -59,14 +59,14 @@ async function generateAndPost(env, postType) {
     Верни СТРОГО JSON: {"text": "..."}`;
   }
   
-  const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  const groqResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${GROQ_API_KEY}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "openai/gpt-oss-120b",
+      model: "meta-llama/llama-3.3-70b-instruct:free",
       messages: [
         { role: "system", content: `Ты — админ Telegram-канала с нарезками из "Южного Парка" (South Park). 
 Ты дерзкий, умный, используешь черный юмор и сатиру, как в самом сериале. 
@@ -99,9 +99,8 @@ async function generateAndPost(env, postType) {
   
   const groqData = await groqResponse.json();
 
-  // Проверка: Если Groq вернул ошибку, мы ее покажем
   if (!groqData.choices) {
-    throw new Error("Ошибка от Groq AI: " + JSON.stringify(groqData));
+    throw new Error("Ошибка от OpenRouter: " + JSON.stringify(groqData));
   }
 
   const content = JSON.parse(groqData.choices[0].message.content);
