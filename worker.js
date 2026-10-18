@@ -32,16 +32,15 @@ export default {
 // ОСНОВНАЯ ФУНКЦИЯ
 // ============================================================
 async function generateAndPost(env, postType) {
-  const { TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID } = env;
   
-  // ВНИМАНИЕ! ВСТАВЬ СВОЙ КЛЮЧ ОТ OPENROUTER ВМЕСТО ТЕКСТА НИЖЕ
-  const GROQ_API_KEY = "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"; 
+  // ==========================================================
+  // ВНИМАНИЕ! ВСТАВЬ СВОИ ДАННЫЕ В ТРИ СТРОКИ НИЖЕ:
+  // ==========================================================
+  const TELEGRAM_BOT_TOKEN = "8937064578:AAHuY-2CIFWOyhhkReIPmp98e3d4gw_-wTU";
+  const TELEGRAM_CHANNEL_ID = "-1004389745995";
+  const GROQ_API_KEY = "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";
+  // ==========================================================
 
-  // Проверяем, что Cloudflare не потерял переменные Telegram
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHANNEL_ID) {
-    throw new Error("Cloudflare не видит TELEGRAM_BOT_TOKEN или TELEGRAM_CHANNEL_ID! Проверь раздел Variables and Secrets.");
-  }
-  
   const TG_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
   
   const characters = [
@@ -144,7 +143,6 @@ async function generateAndPost(env, postType) {
   const tgResult = await tgResponse.json();
   console.log("Ответ от Telegram API:", JSON.stringify(tgResult));
 
-  // НОВАЯ ПРОВЕРКА: Если Telegram ответил ошибкой, мы ее покажем
   if (!tgResult.ok) {
     throw new Error("Ошибка от Telegram: " + JSON.stringify(tgResult));
   }
