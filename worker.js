@@ -64,9 +64,9 @@ export default {
 // ФУНКЦИЯ ГЕНЕРАЦИИ ПОСТОВ В КАНАЛ
 // ============================================================
 async function generateAndPost(env, postType) {
-  const TELEGRAM_BOT_TOKEN = "ТВОЙ_ТОКЕН_БОТА";
+  const TELEGRAM_BOT_TOKEN = "8937064578:AAHuY-2CIFWOyhhkReIPmp98e3d4gw_-wTU";
   const TELEGRAM_CHANNEL_ID = "-1004389745995";
-  const GROQ_API_KEY = "ВСТАВЬ_СЮДА_КЛЮЧ";
+  const GROQ_API_KEY = "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";
 
   const TG_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
   
@@ -126,8 +126,8 @@ async function generateAndPost(env, postType) {
 // ФУНКЦИЯ ОТВЕТА НА КОММЕНТАРИИ
 // ============================================================
 async function generateReply(env, userComment, userName, chatId, replyToMessageId) {
-  const TELEGRAM_BOT_TOKEN = "ТВОЙ_ТОКЕН_БОТА";
-  const GROQ_API_KEY = "ВСТАВЬ_СЮДА_КЛЮЧ";
+  const TELEGRAM_BOT_TOKEN = "8937064578:AAHuY-2CIFWOyhhkReIPmp98e3d4gw_-wTU";
+  const GROQ_API_KEY = "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";
   const TG_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 
   const characters = ["Эрик Картман", "Кенни Маккормик", "Стэн Марш", "Кайл Брофловски", "Баттерс Стотч", "Рэнди Марш", "Мистер Гаррисон", "Шеф"];
