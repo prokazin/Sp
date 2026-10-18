@@ -22,10 +22,15 @@ export default {
     ctx.waitUntil(generateAndPost(env, postType));
   },
   
-  // 2. Этот блок нужен только если ты захочешь, 
-  // чтобы бот отвечал на сообщения в канале (пока не обязательно)
+  // 2. Этот блок срабатывает, когда ты открываешь ссылку воркера в браузере (для теста)
   async fetch(request, env, ctx) {
-    return new Response("Bot is running", { status: 200 });
+    try {
+      // Принудительно вызываем генерацию и отправку поста
+      await generateAndPost(env, 'text');
+      return new Response("Тестовый пост успешно отправлен! Проверь канал.", { status: 200 });
+    } catch (e) {
+      return new Response("Ошибка: " + e.message, { status: 500 });
+    }
   }
 };
 
