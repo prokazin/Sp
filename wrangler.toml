@@ -1,0 +1,9 @@
+name = "southpark-autoposter"
+main = "worker.js"
+compatibility_date = "2026-10-18"
+
+# Здесь настраиваем расписание (Cron Trigger)
+# "0 */3 * * *" означает "каждые 3 часа, в начале часа"
+# Ты можешь поменять на "0 8,13,19 * * *" (в 8:00, 13:00 и 19:00 UTC)
+[triggers]
+crons = ["0 */3 * * *"]
