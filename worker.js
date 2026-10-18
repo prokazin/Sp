@@ -1,6 +1,5 @@
 // ============================================================
 // АВТОПОСТИНГ ДЛЯ TELEGRAM-КАНАЛА "ЮЖНЫЙ ПАРК"
-// Работает на Cloudflare Workers (бесплатно)
 // ============================================================
 
 export default {
@@ -24,9 +23,7 @@ export default {
       await generateAndPost(env, 'text');
       return new Response("Тестовый пост успешно отправлен! Проверь канал.", { status: 200 });
     } catch (e) {
-      // Если ошибка, показываем первые символы ключа для проверки
-      const keyDebug = env.GROQ_API_KEY ? env.GROQ_API_KEY.substring(0, 7) + "..." : "КЛЮЧ НЕ НАЙДЕН";
-      return new Response("Ошибка: " + e.message + "\n\nДебаг ключа: " + keyDebug, { status: 500 });
+      return new Response("Ошибка: " + e.message, { status: 500 });
     }
   }
 };
@@ -35,7 +32,12 @@ export default {
 // ОСНОВНАЯ ФУНКЦИЯ
 // ============================================================
 async function generateAndPost(env, postType) {
-  const { TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID, GROQ_API_KEY } = env;
+  // Берем токены из Cloudflare
+  const { TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID } = env;
+  
+  // ВНИМАНИЕ! ВСТАВЬ СВОЙ КЛЮЧ ОТ OPENROUTER ВМЕСТО ТЕКСТА НИЖЕ
+  const GROQ_API_KEY = "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"; 
+  
   const TG_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
   
   const characters = [
@@ -66,8 +68,8 @@ async function generateAndPost(env, postType) {
     headers: {
       "Authorization": `Bearer ${GROQ_API_KEY}`,
       "Content-Type": "application/json",
-      "HTTP-Referer": "https://t.me/south_parksp", // Обязательно для OpenRouter
-      "X-Title": "South Park Bot"                 // Обязательно для OpenRouter
+      "HTTP-Referer": "https://t.me/south_parksp",
+      "X-Title": "South Park Bot"
     },
     body: JSON.stringify({
       model: "meta-llama/llama-3.3-70b-instruct:free",
