@@ -36,6 +36,11 @@ async function generateAndPost(env, postType) {
   
   // ВНИМАНИЕ! ВСТАВЬ СВОЙ КЛЮЧ ОТ OPENROUTER ВМЕСТО ТЕКСТА НИЖЕ
   const GROQ_API_KEY = "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"; 
+
+  // Проверяем, что Cloudflare не потерял переменные Telegram
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHANNEL_ID) {
+    throw new Error("Cloudflare не видит TELEGRAM_BOT_TOKEN или TELEGRAM_CHANNEL_ID! Проверь раздел Variables and Secrets.");
+  }
   
   const TG_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
   
@@ -71,7 +76,6 @@ async function generateAndPost(env, postType) {
       "X-Title": "South Park Bot"
     },
     body: JSON.stringify({
-      // Автоматический выбор лучшей доступной бесплатной модели
       model: "openrouter/free",
       messages: [
         { role: "system", content: `Ты — админ Telegram-канала с нарезками из "Южного Парка" (South Park). 
@@ -139,4 +143,9 @@ async function generateAndPost(env, postType) {
 
   const tgResult = await tgResponse.json();
   console.log("Ответ от Telegram API:", JSON.stringify(tgResult));
+
+  // НОВАЯ ПРОВЕРКА: Если Telegram ответил ошибкой, мы ее покажем
+  if (!tgResult.ok) {
+    throw new Error("Ошибка от Telegram: " + JSON.stringify(tgResult));
+  }
 }
