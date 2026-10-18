@@ -1,5 +1,5 @@
 // ============================================================
-// АВТОПОСТИНГ И ОТВЕТЫ НА КОММЕНТАРИИ (С ЗАЩИТОЙ ОТ СПАМА)
+// АВТОПОСТИНГ И ОТВЕТЫ НА КОММЕНТАРИИ (MISTRAL AI)
 // ============================================================
 
 export default {
@@ -64,9 +64,13 @@ export default {
 // ФУНКЦИЯ ГЕНЕРАЦИИ ПОСТОВ В КАНАЛ
 // ============================================================
 async function generateAndPost(env, postType) {
+  // ==========================================================
+  // ВНИМАНИЕ! ВСТАВЬ СВОИ ДАННЫЕ В ТРИ СТРОКИ НИЖЕ:
+  // ==========================================================
   const TELEGRAM_BOT_TOKEN = "8937064578:AAHuY-2CIFWOyhhkReIPmp98e3d4gw_-wTU";
   const TELEGRAM_CHANNEL_ID = "-1004389745995";
-  const GROQ_API_KEY = "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";
+  const MISTRAL_API_KEY = "mstrl_rcIzwevGJMfixwZi1pMqPxykdUF7vNS5_2ngr36";
+  // ==========================================================
 
   const TG_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
   
@@ -82,29 +86,27 @@ async function generateAndPost(env, postType) {
     prompt = `Напиши короткую мысль-подводку от лица персонажа: ${chosenCharacter}. 1-2 предложения. Верни СТРОГО JSON: {"quote": "..."}`;
   }
   
-  const groqResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  const mistralResponse = await fetch("https://api.mistral.ai/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${GROQ_API_KEY}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://t.me/south_parksp",
-      "X-Title": "South Park Bot"
+      "Authorization": `Bearer ${MISTRAL_API_KEY}`,
+      "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "openrouter/free",
+      model: "mistral-small-latest",
       messages: [
         { role: "system", content: `Ты — админ канала "Южный Парк". Ты дерзкий, используешь черный юмор. 
 ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни ответ СТРОГО в JSON-формате: {"quote": "..."} или {"question": "...", "options": [...]}.` },
         { role: "user", content: prompt }
       ],
       temperature: 0.9,
-      response_format: { type: "json_object" }
+      response_format: { type: "json_object" } // Включает JSON-режим Mistral
     })
   });
   
-  const groqData = await groqResponse.json();
-  if (!groqData.choices) throw new Error("Ошибка OpenRouter: " + JSON.stringify(groqData));
-  const content = JSON.parse(groqData.choices[0].message.content);
+  const mistralData = await mistralResponse.json();
+  if (!mistralData.choices) throw new Error("Ошибка Mistral AI: " + JSON.stringify(mistralData));
+  const content = JSON.parse(mistralData.choices[0].message.content);
   
   if (postType === 'poll') {
     await fetch(`${TG_API}/sendPoll`, {
@@ -127,7 +129,7 @@ async function generateAndPost(env, postType) {
 // ============================================================
 async function generateReply(env, userComment, userName, chatId, replyToMessageId) {
   const TELEGRAM_BOT_TOKEN = "8937064578:AAHuY-2CIFWOyhhkReIPmp98e3d4gw_-wTU";
-  const GROQ_API_KEY = "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";
+  const MISTRAL_API_KEY = "mstrl_rcIzwevGJMfixwZi1pMqPxykdUF7vNS5_2ngr36";
   const TG_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 
   const characters = ["Эрик Картман", "Кенни Маккормик", "Стэн Марш", "Кайл Брофловски", "Баттерс Стотч", "Рэнди Марш", "Мистер Гаррисон", "Шеф"];
@@ -138,16 +140,14 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
 Ответ должен быть остроумным, по делу, в стиле персонажа (1-3 предложения).
 Верни СТРОГО JSON: {"reply": "текст твоего ответа"}`;
 
-  const groqResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  const mistralResponse = await fetch("https://api.mistral.ai/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${GROQ_API_KEY}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://t.me/south_parksp",
-      "X-Title": "South Park Bot"
+      "Authorization": `Bearer ${MISTRAL_API_KEY}`,
+      "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "openrouter/free",
+      model: "mistral-small-latest",
       messages: [
         { role: "system", content: `Ты — персонаж из "Южного Парка". Отвечай коротко, дерзко, но по смыслу комментария. 
 ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни СТРОГО JSON: {"reply": "..."}.` },
@@ -158,10 +158,10 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
     })
   });
 
-  const groqData = await groqResponse.json();
-  if (!groqData.choices) return; 
+  const mistralData = await mistralResponse.json();
+  if (!mistralData.choices) return; 
 
-  const content = JSON.parse(groqData.choices[0].message.content);
+  const content = JSON.parse(mistralData.choices[0].message.content);
   
   const formattedReply = `<b>${chosenCharacter}:</b>\n<blockquote>${content.reply}</blockquote>`;
 
