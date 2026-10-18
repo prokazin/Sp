@@ -6,18 +6,21 @@ export default {
   // 1. Этот блок срабатывает по расписанию (Cron Trigger)
   async scheduled(event, env, ctx) {
     const now = new Date();
-    const hour = now.getUTCHours(); // 0-23 по UTC
+    const hour = now.getUTCHours(); // Время по Гринвичу (0-23)
     
-    let postType = 'text';
-    if (hour >= 6 && hour < 10) postType = 'text';
-    else if (hour >= 12 && hour < 16) postType = 'poll';
-    else if (hour >= 18 && hour < 22) postType = 'joke';
-    else return; 
+    // Логика строго под расписание "0 5,10,15,18 * * *"
+    let postType = '';
+    if (hour === 5) postType = 'text';       // 08:00 по МСК (Утренняя мысль)
+    else if (hour === 10) postType = 'poll'; // 13:00 по МСК (Обеденный опрос)
+    else if (hour === 15) postType = 'joke'; // 18:00 по МСК (Вечерняя шутка)
+    else if (hour === 18) postType = 'text'; // 21:00 по МСК (Ночная мысль)
+    else return; // Если запуск вне этих часов, бот "спит"
     
+    // Запускаем отправку
     ctx.waitUntil(generateAndPost(env, postType));
   },
   
-  // 2. Этот блок срабатывает при открытии ссылки в браузере (для теста)
+  // 2. Этот блок срабатывает при открытии ссылки в браузере (для ручного теста)
   async fetch(request, env, ctx) {
     try {
       await generateAndPost(env, 'text');
@@ -29,16 +32,16 @@ export default {
 };
 
 // ============================================================
-// ОСНОВНАЯ ФУНКЦИЯ
+// ОСНОВНАЯ ФУНКЦИЯ ГЕНЕРАЦИИ И ОТПРАВКИ
 // ============================================================
 async function generateAndPost(env, postType) {
   
   // ==========================================================
   // ВНИМАНИЕ! ВСТАВЬ СВОИ ДАННЫЕ В ТРИ СТРОКИ НИЖЕ:
   // ==========================================================
-  const TELEGRAM_BOT_TOKEN = "8937064578:AAHuY-2CIFWOyhhkReIPmp98e3d4gw_-wTU";
+  const TELEGRAM_BOT_TOKEN = "ТВОЙ_ТОКЕН_БОТА";
   const TELEGRAM_CHANNEL_ID = "-1004389745995";
-  const GROQ_API_KEY = "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";
+  const GROQ_API_KEY = "ВСТАВЬ_СЮДА_КЛЮЧ";
   // ==========================================================
 
   const TG_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
@@ -59,10 +62,12 @@ async function generateAndPost(env, postType) {
   } else if (postType === 'joke') {
     prompt = `Напиши дерзкую мысль или шутку от лица персонажа: ${chosenCharacter}.
     1-2 предложения, черный юмор, отсылки к сериалу, 1-2 эмодзи.
+    ОБЯЗАТЕЛЬНО используй HTML-теги: имя персонажа сделай жирным (<b>Имя</b>), а саму шутку оберни в цитату (<blockquote>Текст</blockquote>).
     Верни СТРОГО JSON: {"text": "..."}`;
   } else {
     prompt = `Напиши короткую мысль-подводку от лица персонажа: ${chosenCharacter}.
     1-2 предложения, тон как у фаната, 1 эмодзи.
+    ОБЯЗАТЕЛЬНО используй HTML-теги: имя персонажа сделай жирным (<b>Имя</b>), а саму мысль оберни в цитату (<blockquote>Текст</blockquote>).
     Верни СТРОГО JSON: {"text": "..."}`;
   }
   
@@ -98,6 +103,7 @@ async function generateAndPost(env, postType) {
 - Пиши коротко: 1-2 предложения максимум.
 - Не используй слова "нарезка", "видео", "пост".
 - Добавляй 1-2 эмодзи в конце.
+- ВСЕГДА используй HTML-теги <b> для имени и <blockquote> для реплики.
 - Верни ответ СТРОГО в JSON-формате: {"text": "..."} или {"question": "...", "options": [...]}.` },
         { role: "user", content: prompt }
       ],
@@ -135,7 +141,7 @@ async function generateAndPost(env, postType) {
       body: JSON.stringify({
         chat_id: TELEGRAM_CHANNEL_ID,
         text: content.text,
-        parse_mode: "HTML"
+        parse_mode: "HTML" // Включает поддержку жирного шрифта и цитат
       })
     });
   }
