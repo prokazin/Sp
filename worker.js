@@ -32,7 +32,6 @@ export default {
 // ОСНОВНАЯ ФУНКЦИЯ
 // ============================================================
 async function generateAndPost(env, postType) {
-  // Берем токены из Cloudflare
   const { TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID } = env;
   
   // ВНИМАНИЕ! ВСТАВЬ СВОЙ КЛЮЧ ОТ OPENROUTER ВМЕСТО ТЕКСТА НИЖЕ
@@ -72,8 +71,7 @@ async function generateAndPost(env, postType) {
       "X-Title": "South Park Bot"
     },
     body: JSON.stringify({
-      // Заменили модель на актуальную бесплатную с поддержкой JSON
-      model: "openai/gpt-oss-20b:free",
+      model: "deepseek/deepseek-chat-v3-0324:free",
       messages: [
         { role: "system", content: `Ты — админ Telegram-канала с нарезками из "Южного Парка" (South Park). 
 Ты дерзкий, умный, используешь черный юмор и сатиру, как в самом сериале. 
