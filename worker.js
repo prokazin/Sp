@@ -17,15 +17,9 @@ export default {
     else if (hour >= 18 && hour < 22) postType = 'joke';
     else return; // Ночью (по UTC) бот "спит" и ничего не публикует
     
-    // С вероятностью 70% публикуем, 30% — "пропускаем" день, 
-    // чтобы не выглядеть как робот, который постит строго по часам.
-    if (Math.random() > 0.7) {
-      console.log("Пропускаем публикацию для имитации человека");
-      return;
-    }
-    
-    // Вызываем основную функцию генерации и публикации
-    await generateAndPost(env, postType);
+    // Вызываем основную функцию генерации и публикации.
+    // ctx.waitUntil не дает Cloudflare прервать отправку на полпути.
+    ctx.waitUntil(generateAndPost(env, postType));
   },
   
   // 2. Этот блок нужен только если ты захочешь, 
@@ -148,8 +142,8 @@ async function generateAndPost(env, postType) {
 - Верни ответ СТРОГО в JSON-формате: {"text": "..."} или {"question": "...", "options": [...]}.` },
         { role: "user", content: prompt }
       ],
-      temperature: 0.9, // Высокая температура = больше креатива и "человечности"
-      response_format: { type: "json_object" } // Заставляем вернуть JSON
+      temperature: 0.9,
+      response_format: { type: "json_object" }
     })
   });
   
@@ -157,29 +151,35 @@ async function generateAndPost(env, postType) {
   const content = JSON.parse(groqData.choices[0].message.content);
   
   // --- Шаг 2: Публикуем в Telegram ---
+  let tgResponse;
+  
   if (postType === 'poll') {
     // Отправляем опрос
-    await fetch(`${TG_API}/sendPoll`, {
+    tgResponse = await fetch(`${TG_API}/sendPoll`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: TELEGRAM_CHANNEL_ID,
         question: content.question,
         options: content.options,
-        is_anonymous: false, // Люди любят видеть, как голосуют другие
+        is_anonymous: false,
         type: "regular"
       })
     });
   } else {
     // Отправляем текстовый пост (шутка или подводка)
-    await fetch(`${TG_API}/sendMessage`, {
+    tgResponse = await fetch(`${TG_API}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: TELEGRAM_CHANNEL_ID,
         text: content.text,
-        parse_mode: "HTML" // Разрешает базовое форматирование (жирный, курсив)
+        parse_mode: "HTML"
       })
     });
   }
+
+  // Выводим ответ Telegram в логи, чтобы видеть ошибки
+  const tgResult = await tgResponse.json();
+  console.log("Ответ от Telegram API:", JSON.stringify(tgResult));
 }
