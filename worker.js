@@ -24,7 +24,9 @@ export default {
       await generateAndPost(env, 'text');
       return new Response("Тестовый пост успешно отправлен! Проверь канал.", { status: 200 });
     } catch (e) {
-      return new Response("Ошибка: " + e.message, { status: 500 });
+      // Если ошибка, показываем первые символы ключа для проверки
+      const keyDebug = env.GROQ_API_KEY ? env.GROQ_API_KEY.substring(0, 7) + "..." : "КЛЮЧ НЕ НАЙДЕН";
+      return new Response("Ошибка: " + e.message + "\n\nДебаг ключа: " + keyDebug, { status: 500 });
     }
   }
 };
@@ -63,7 +65,9 @@ async function generateAndPost(env, postType) {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${GROQ_API_KEY}`,
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://t.me/south_parksp", // Обязательно для OpenRouter
+      "X-Title": "South Park Bot"                 // Обязательно для OpenRouter
     },
     body: JSON.stringify({
       model: "meta-llama/llama-3.3-70b-instruct:free",
