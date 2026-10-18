@@ -71,7 +71,8 @@ async function generateAndPost(env, postType) {
       "X-Title": "South Park Bot"
     },
     body: JSON.stringify({
-      model: "qwen/qwen3-32b:free",
+      // Автоматический выбор лучшей доступной бесплатной модели
+      model: "openrouter/free",
       messages: [
         { role: "system", content: `Ты — админ Telegram-канала с нарезками из "Южного Парка" (South Park). 
 Ты дерзкий, умный, используешь черный юмор и сатиру, как в самом сериале. 
