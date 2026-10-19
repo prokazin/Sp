@@ -72,7 +72,11 @@ async function generateAndPost(env, postType) {
   const TG_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
   
   const characters = ["Эрик Картман", "Кенни Маккормик", "Стэн Марш", "Кайл Брофловски", "Баттерс Стотч", "Рэнди Марш", "Мистер Гаррисон", "Шеф"];
-  const chosenCharacter = characters[Math.floor(Math.random() * characters.length)];
+  
+  // Умный выбор персонажа: он чередуется в зависимости от дня и часа (чтобы не было повторов подряд)
+  const now = new Date();
+  const charIndex = (now.getDate() + now.getHours()) % characters.length;
+  const chosenCharacter = characters[charIndex];
   
   let prompt = "";
   if (postType === 'poll') {
@@ -87,7 +91,8 @@ async function generateAndPost(env, postType) {
   const aiResponse = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
     messages: [
       { role: "system", content: `Ты — админ канала "Южный Парк". Ты дерзкий, используешь черный юмор. 
-ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни ответ СТРОГО в JSON-формате: {"quote": "..."} или {"question": "...", "options": [...]}.` },
+ВЕРНИ ОТВЕТ СТРОГО НА РУССКОМ ЯЗЫКЕ. НИКАКИХ АНГЛИЙСКИХ СЛОВ. 
+Верни ответ СТРОГО в JSON-формате: {"quote": "..."} или {"question": "...", "options": [...]}.` },
       { role: "user", content: prompt }
     ],
     response_format: { type: "json_object" }
@@ -144,7 +149,8 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
   const aiResponse = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
     messages: [
       { role: "system", content: `Ты — персонаж из "Южного Парка". Отвечай коротко, дерзко, но по смыслу комментария. 
-ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни СТРОГО JSON: {"reply": "..."}.` },
+ВЕРНИ ОТВЕТ СТРОГО НА РУССКОМ ЯЗЫКЕ. НИКАКИХ АНГЛИЙСКИХ СЛОВ. 
+Верни СТРОГО JSON: {"reply": "..."}.` },
       { role: "user", content: prompt }
     ],
     response_format: { type: "json_object" }
