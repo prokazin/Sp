@@ -1,5 +1,5 @@
 // ============================================================
-// АВТОПОСТИНГ И ОТВЕТЫ НА КОММЕНТАРИИ (UNCLOSEAI / HERMES)
+// АВТОПОСТИНГ И ОТВЕТЫ НА КОММЕНТАРИИ (CLOUDFLARE WORKERS AI)
 // ============================================================
 
 export default {
@@ -83,28 +83,17 @@ async function generateAndPost(env, postType) {
     prompt = `Напиши короткую мысль-подводку от лица персонажа: ${chosenCharacter}. 1-2 предложения. Верни СТРОГО JSON: {"quote": "..."}`;
   }
   
-  // Запрос к uncloseai (Hermes)
-  const aiResponse = await fetch("https://hermes.ai.unturf.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "hermes-3-llama-3.1-8b",
-      messages: [
-        { role: "system", content: `Ты — админ канала "Южный Парк". Ты дерзкий, используешь черный юмор. 
+  // Встроенный в Cloudflare искусственный интеллект
+  const aiResponse = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+    messages: [
+      { role: "system", content: `Ты — админ канала "Южный Парк". Ты дерзкий, используешь черный юмор. 
 ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни ответ СТРОГО в JSON-формате: {"quote": "..."} или {"question": "...", "options": [...]}.` },
-        { role: "user", content: prompt }
-      ],
-      temperature: 0.9
-    })
+      { role: "user", content: prompt }
+    ]
   });
   
-  const aiData = await aiResponse.json();
-  if (!aiData.choices) throw new Error("Ошибка uncloseai: " + JSON.stringify(aiData));
-  
-  // Извлекаем JSON из ответа (модель может вернуть текст с оберткой)
-  const rawText = aiData.choices[0].message.content;
+  // Извлекаем JSON из ответа нейросети
+  const rawText = aiResponse.response;
   const jsonMatch = rawText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("Не удалось найти JSON в ответе: " + rawText);
   const content = JSON.parse(jsonMatch[0]);
@@ -144,26 +133,15 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
 Ответ должен быть остроумным, по делу, в стиле персонажа (1-3 предложения).
 Верни СТРОГО JSON: {"reply": "текст твоего ответа"}`;
 
-  const aiResponse = await fetch("https://hermes.ai.unturf.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "hermes-3-llama-3.1-8b",
-      messages: [
-        { role: "system", content: `Ты — персонаж из "Южного Парка". Отвечай коротко, дерзко, но по смыслу комментария. 
+  const aiResponse = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+    messages: [
+      { role: "system", content: `Ты — персонаж из "Южного Парка". Отвечай коротко, дерзко, но по смыслу комментария. 
 ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни СТРОГО JSON: {"reply": "..."}.` },
-        { role: "user", content: prompt }
-      ],
-      temperature: 0.9
-    })
+      { role: "user", content: prompt }
+    ]
   });
 
-  const aiData = await aiResponse.json();
-  if (!aiData.choices) return; 
-
-  const rawText = aiData.choices[0].message.content;
+  const rawText = aiResponse.response;
   const jsonMatch = rawText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) return;
   const content = JSON.parse(jsonMatch[0]);
