@@ -40,7 +40,9 @@ export default {
       try {
         const update = await request.json();
         
-        if (update.message && update.message.text && !update.message.from.is_bot) {
+        // ИСПРАВЛЕНИЕ: Добавлено условие !update.message.is_automatic_forward, 
+        // чтобы бот не отвечал на автопересылки постов из самого канала.
+        if (update.message && update.message.text && !update.message.from.is_bot && !update.message.is_automatic_forward) {
           const text = update.message.text;
           const userName = update.message.from.first_name;
           const chatId = update.message.chat.id;
@@ -73,7 +75,6 @@ async function generateAndPost(env, postType) {
   
   const characters = ["Эрик Картман", "Кенни Маккормик", "Стэн Марш", "Кайл Брофловски", "Баттерс Стотч", "Рэнди Марш", "Мистер Гаррисон", "Шеф"];
   
-  // Умный выбор персонажа: он чередуется в зависимости от дня и часа (чтобы не было повторов подряд)
   const now = new Date();
   const charIndex = (now.getDate() + now.getHours()) % characters.length;
   const chosenCharacter = characters[charIndex];
@@ -87,7 +88,6 @@ async function generateAndPost(env, postType) {
     prompt = `Напиши короткую мысль-подводку от лица персонажа: ${chosenCharacter}. 1-2 предложения. Верни СТРОГО JSON: {"quote": "..."}`;
   }
   
-  // Запрос к актуальной модели Cloudflare Workers AI
   const aiResponse = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
     messages: [
       { role: "system", content: `Ты — админ канала "Южный Парк". Ты дерзкий, используешь черный юмор. 
@@ -98,7 +98,6 @@ async function generateAndPost(env, postType) {
     response_format: { type: "json_object" }
   });
   
-  // Безопасное извлечение JSON
   const rawResponse = aiResponse.response;
   if (!rawResponse) throw new Error("Пустой ответ от ИИ: " + JSON.stringify(aiResponse));
   
