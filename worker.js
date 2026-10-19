@@ -99,10 +99,8 @@ async function generateAndPost(env, postType) {
   
   let content;
   if (typeof rawResponse === 'object' && rawResponse !== null) {
-    // Если ИИ вернул сразу готовый объект
     content = rawResponse; 
   } else {
-    // Если ИИ вернул строку, вытаскиваем из нее JSON
     const jsonMatch = String(rawResponse).match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("Не удалось найти JSON в ответе: " + rawResponse);
     content = JSON.parse(jsonMatch[0]);
