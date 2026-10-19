@@ -1,5 +1,5 @@
 // ============================================================
-// АВТОПОСТИНГ И ОТВЕТЫ НА КОММЕНТАРИИ (KILO GATEWAY)
+// АВТОПОСТИНГ И ОТВЕТЫ НА КОММЕНТАРИИ (UNCLOSEAI / HERMES)
 // ============================================================
 
 export default {
@@ -8,7 +8,6 @@ export default {
     const now = new Date();
     const hour = now.getUTCHours(); 
     
-    // Жесткая привязка к часам, чтобы избежать спама при частых запусках
     let postType = '';
     if (hour === 5) postType = 'text';
     else if (hour === 10) postType = 'poll';
@@ -41,7 +40,6 @@ export default {
       try {
         const update = await request.json();
         
-        // Если это сообщение в группе, и это не бот
         if (update.message && update.message.text && !update.message.from.is_bot) {
           const text = update.message.text;
           const userName = update.message.from.first_name;
@@ -85,29 +83,27 @@ async function generateAndPost(env, postType) {
     prompt = `Напиши короткую мысль-подводку от лица персонажа: ${chosenCharacter}. 1-2 предложения. Верни СТРОГО JSON: {"quote": "..."}`;
   }
   
-  // Запрос к Kilo Gateway (ключ "anonymous")
-  const aiResponse = await fetch("https://api.kilo.ai/api/gateway/chat/completions", {
+  // Запрос к uncloseai (Hermes)
+  const aiResponse = await fetch("https://hermes.ai.unturf.com/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer anonymous"
+      "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "kilo-auto/free",
+      model: "hermes-3-llama-3.1-8b",
       messages: [
         { role: "system", content: `Ты — админ канала "Южный Парк". Ты дерзкий, используешь черный юмор. 
 ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни ответ СТРОГО в JSON-формате: {"quote": "..."} или {"question": "...", "options": [...]}.` },
         { role: "user", content: prompt }
       ],
-      temperature: 0.9,
-      response_format: { type: "json_object" }
+      temperature: 0.9
     })
   });
   
   const aiData = await aiResponse.json();
-  if (!aiData.choices) throw new Error("Ошибка Kilo Gateway: " + JSON.stringify(aiData));
+  if (!aiData.choices) throw new Error("Ошибка uncloseai: " + JSON.stringify(aiData));
   
-  // Извлекаем JSON из ответа (Kilo Gateway может вернуть текст с оберткой)
+  // Извлекаем JSON из ответа (модель может вернуть текст с оберткой)
   const rawText = aiData.choices[0].message.content;
   const jsonMatch = rawText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("Не удалось найти JSON в ответе: " + rawText);
@@ -133,7 +129,11 @@ async function generateAndPost(env, postType) {
 // ФУНКЦИЯ ОТВЕТА НА КОММЕНТАРИИ
 // ============================================================
 async function generateReply(env, userComment, userName, chatId, replyToMessageId) {
-  const TELEGRAM_BOT_TOKEN = "ТВОЙ_ТОКЕН_БОТА";
+  // ==========================================================
+  // ВНИМАНИЕ! ВСТАВЬ СВОЙ ТОКЕН БОТА И ТУТ ТОЖЕ:
+  // ==========================================================
+  const TELEGRAM_BOT_TOKEN = "8937064578:AAHuY-2CIFWOyhhkReIPmp98e3d4gw_-wTU";
+  // ==========================================================
   const TG_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 
   const characters = ["Эрик Картман", "Кенни Маккормик", "Стэн Марш", "Кайл Брофловски", "Баттерс Стотч", "Рэнди Марш", "Мистер Гаррисон", "Шеф"];
@@ -144,21 +144,19 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
 Ответ должен быть остроумным, по делу, в стиле персонажа (1-3 предложения).
 Верни СТРОГО JSON: {"reply": "текст твоего ответа"}`;
 
-  const aiResponse = await fetch("https://api.kilo.ai/api/gateway/chat/completions", {
+  const aiResponse = await fetch("https://hermes.ai.unturf.com/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer anonymous"
+      "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "kilo-auto/free",
+      model: "hermes-3-llama-3.1-8b",
       messages: [
         { role: "system", content: `Ты — персонаж из "Южного Парка". Отвечай коротко, дерзко, но по смыслу комментария. 
 ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни СТРОГО JSON: {"reply": "..."}.` },
         { role: "user", content: prompt }
       ],
-      temperature: 0.9,
-      response_format: { type: "json_object" }
+      temperature: 0.9
     })
   });
 
