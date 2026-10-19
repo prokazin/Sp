@@ -1,11 +1,11 @@
-name = "southpark-autoposter"
+name = "sp"
 main = "worker.js"
-compatibility_date = "2026-10-18"
+compatibility_date = "2024-10-18"
 
-# Расписание публикаций (время в UTC):
-# 05:00 UTC = 08:00 МСК
-# 10:00 UTC = 13:00 МСК
-# 15:00 UTC = 18:00 МСК
-# 18:00 UTC = 21:00 МСК
+# Эта строчка дает доступ к встроенному ИИ Cloudflare
+[ai]
+binding = "AI"
+
+# Расписание (4 раза в день по Гринвичу)
 [triggers]
 crons = ["0 5,10,15,18 * * *"]
