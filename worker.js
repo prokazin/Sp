@@ -40,7 +40,6 @@ export default {
       try {
         const update = await request.json();
         
-        // Если это сообщение в группе, и это не бот
         if (update.message && update.message.text && !update.message.from.is_bot) {
           const text = update.message.text;
           const userName = update.message.from.first_name;
@@ -94,11 +93,20 @@ async function generateAndPost(env, postType) {
     response_format: { type: "json_object" }
   });
   
-  // Извлекаем JSON из ответа нейросети
-  const rawText = aiResponse.response;
-  const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Не удалось найти JSON в ответе: " + rawText);
-  const content = JSON.parse(jsonMatch[0]);
+  // Безопасное извлечение JSON
+  const rawResponse = aiResponse.response;
+  if (!rawResponse) throw new Error("Пустой ответ от ИИ: " + JSON.stringify(aiResponse));
+  
+  let content;
+  if (typeof rawResponse === 'object' && rawResponse !== null) {
+    // Если ИИ вернул сразу готовый объект
+    content = rawResponse; 
+  } else {
+    // Если ИИ вернул строку, вытаскиваем из нее JSON
+    const jsonMatch = String(rawResponse).match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("Не удалось найти JSON в ответе: " + rawResponse);
+    content = JSON.parse(jsonMatch[0]);
+  }
   
   if (postType === 'poll') {
     await fetch(`${TG_API}/sendPoll`, {
@@ -144,10 +152,17 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
     response_format: { type: "json_object" }
   });
 
-  const rawText = aiResponse.response;
-  const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) return;
-  const content = JSON.parse(jsonMatch[0]);
+  const rawResponse = aiResponse.response;
+  if (!rawResponse) return;
+  
+  let content;
+  if (typeof rawResponse === 'object' && rawResponse !== null) {
+    content = rawResponse;
+  } else {
+    const jsonMatch = String(rawResponse).match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return;
+    content = JSON.parse(jsonMatch[0]);
+  }
   
   const formattedReply = `<b>${chosenCharacter}:</b>\n<blockquote>${content.reply}</blockquote>`;
 
