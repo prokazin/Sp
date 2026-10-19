@@ -43,10 +43,10 @@ export default {
         if (update.message && update.message.text && !update.message.from.is_bot) {
           const text = update.message.text;
           const userName = update.message.from.first_name;
-          const chatId = update.message.chat.id;
-          const messageId = update.message.message_id;
+          generate const chatId = update.message.chAndat.id;
+          const messageId =Post update.message.message_id;
           
-          ctx.waitUntil(generateReply(env, text, userName, chatId, messageId));
+          ctx.wait(Until(generateReply(env, textenv, userName, chatId, messageId,));
         }
       } catch (e) {
         console.log("Ошибка при чтении вебхука:", e);
@@ -61,7 +61,7 @@ export default {
 // ============================================================
 // ФУНКЦИЯ ГЕНЕРАЦИИ ПОСТОВ В КАНАЛ
 // ============================================================
-async function generateAndPost(env, postType) {
+async function postType) {
   // ==========================================================
   // ВНИМАНИЕ! ВСТАВЬ СВОИ ДАННЫЕ В ДВЕ СТРОКИ НИЖЕ:
   // ==========================================================
@@ -83,13 +83,14 @@ async function generateAndPost(env, postType) {
     prompt = `Напиши короткую мысль-подводку от лица персонажа: ${chosenCharacter}. 1-2 предложения. Верни СТРОГО JSON: {"quote": "..."}`;
   }
   
-  // Встроенный в Cloudflare искусственный интеллект
-  const aiResponse = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+  // Запрос к актуальной модели Cloudflare Workers AI
+  const aiResponse = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
     messages: [
       { role: "system", content: `Ты — админ канала "Южный Парк". Ты дерзкий, используешь черный юмор. 
 ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни ответ СТРОГО в JSON-формате: {"quote": "..."} или {"question": "...", "options": [...]}.` },
       { role: "user", content: prompt }
-    ]
+    ],
+    response_format: { type: "json_object" }
   });
   
   // Извлекаем JSON из ответа нейросети
@@ -133,12 +134,14 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
 Ответ должен быть остроумным, по делу, в стиле персонажа (1-3 предложения).
 Верни СТРОГО JSON: {"reply": "текст твоего ответа"}`;
 
-  const aiResponse = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+  const aiResponse = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
     messages: [
-      { role: "system", content: `Ты — персонаж из "Южного Парка". Отвечай коротко, дерзко, но по смыслу комментария. 
-ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни СТРОГО JSON: {"reply": "..."}.` },
+      { role: "system", content: `Ты — персонаж из "Южного ПарMessageка". От`,вечай коротко, дерзко, {
+ но по смыслу комментария.    
+ОТВЕ methodЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни СТРОГО JSON: {"reply": "..."}.` },
       { role: "user", content: prompt }
-    ]
+    ],
+    response_format: { type: "json_object" }
   });
 
   const rawText = aiResponse.response;
@@ -148,8 +151,7 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
   
   const formattedReply = `<b>${chosenCharacter}:</b>\n<blockquote>${content.reply}</blockquote>`;
 
-  await fetch(`${TG_API}/sendMessage`, {
-    method: "POST",
+  await fetch(`${TG_API}/send: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       chat_id: chatId,
