@@ -40,13 +40,14 @@ export default {
       try {
         const update = await request.json();
         
+        // Если это сообщение в группе, и это не бот
         if (update.message && update.message.text && !update.message.from.is_bot) {
           const text = update.message.text;
           const userName = update.message.from.first_name;
-          generate const chatId = update.message.chAndat.id;
-          const messageId =Post update.message.message_id;
+          const chatId = update.message.chat.id;
+          const messageId = update.message.message_id;
           
-          ctx.wait(Until(generateReply(env, textenv, userName, chatId, messageId,));
+          ctx.waitUntil(generateReply(env, text, userName, chatId, messageId));
         }
       } catch (e) {
         console.log("Ошибка при чтении вебхука:", e);
@@ -61,7 +62,7 @@ export default {
 // ============================================================
 // ФУНКЦИЯ ГЕНЕРАЦИИ ПОСТОВ В КАНАЛ
 // ============================================================
-async function postType) {
+async function generateAndPost(env, postType) {
   // ==========================================================
   // ВНИМАНИЕ! ВСТАВЬ СВОИ ДАННЫЕ В ДВЕ СТРОКИ НИЖЕ:
   // ==========================================================
@@ -136,9 +137,8 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
 
   const aiResponse = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
     messages: [
-      { role: "system", content: `Ты — персонаж из "Южного ПарMessageка". От`,вечай коротко, дерзко, {
- но по смыслу комментария.    
-ОТВЕ methodЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни СТРОГО JSON: {"reply": "..."}.` },
+      { role: "system", content: `Ты — персонаж из "Южного Парка". Отвечай коротко, дерзко, но по смыслу комментария. 
+ОТВЕЧАЙ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни СТРОГО JSON: {"reply": "..."}.` },
       { role: "user", content: prompt }
     ],
     response_format: { type: "json_object" }
@@ -151,7 +151,8 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
   
   const formattedReply = `<b>${chosenCharacter}:</b>\n<blockquote>${content.reply}</blockquote>`;
 
-  await fetch(`${TG_API}/send: "POST",
+  await fetch(`${TG_API}/sendMessage`, {
+    method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       chat_id: chatId,
