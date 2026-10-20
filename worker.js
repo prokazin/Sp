@@ -3,7 +3,6 @@
 // ============================================================
 
 export default {
-  // 1. Блок расписания (Cron Trigger)
   async scheduled(event, env, ctx) {
     const now = new Date();
     const hour = now.getUTCHours(); 
@@ -18,11 +17,9 @@ export default {
     ctx.waitUntil(generateAndPost(env, postType));
   },
   
-  // 2. Блок для приема запросов
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     
-    // ЗАЩИТА ОТ СПАМА: Пост отправится только если в ссылке есть ?test=true
     if (request.method === 'GET') {
       if (url.searchParams.get('test') === 'true') {
         try {
@@ -32,16 +29,13 @@ export default {
           return new Response("Ошибка: " + e.message, { status: 500 });
         }
       }
-      return new Response("Бот работает в фоновом режиме. Для теста добавь в ссылку ?test=true", { status: 200 });
+      return new Response("Бот работает. Для теста добавь ?test=true", { status: 200 });
     }
     
-    // Обработка комментариев от Telegram
     if (request.method === 'POST') {
       try {
         const update = await request.json();
         
-        // ИСПРАВЛЕНИЕ: Добавлено условие !update.message.is_automatic_forward, 
-        // чтобы бот не отвечал на автопересылки постов из самого канала.
         if (update.message && update.message.text && !update.message.from.is_bot && !update.message.is_automatic_forward) {
           const text = update.message.text;
           const userName = update.message.from.first_name;
@@ -51,7 +45,7 @@ export default {
           ctx.waitUntil(generateReply(env, text, userName, chatId, messageId));
         }
       } catch (e) {
-        console.log("Ошибка при чтении вебхука:", e);
+        console.log("Ошибка вебхука:", e);
       }
       return new Response("OK", { status: 200 });
     }
@@ -64,17 +58,17 @@ export default {
 // ФУНКЦИЯ ГЕНЕРАЦИИ ПОСТОВ В КАНАЛ
 // ============================================================
 async function generateAndPost(env, postType) {
-  // ==========================================================
-  // ВНИМАНИЕ! ВСТАВЬ СВОИ ДАННЫЕ В ДВЕ СТРОКИ НИЖЕ:
-  // ==========================================================
-  const TELEGRAM_BOT_TOKEN = "8937064578:AAHuY-2CIFWOyhhkReIPmp98e3d4gw_-wTU";
-  const TELEGRAM_CHANNEL_ID = "-1004389745995";
-  // ==========================================================
+  // ТЕПЕРЬ БЕРЕМ ИЗ СЕКРЕТОВ CLOUDFLARE
+  const TELEGRAM_BOT_TOKEN = env.TELEGRAM_BOT_TOKEN;
+  const TELEGRAM_CHANNEL_ID = env.TELEGRAM_CHANNEL_ID;
+
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHANNEL_ID) {
+      throw new Error("Нет токена или ID канала в настройках Cloudflare!");
+  }
 
   const TG_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
   
   const characters = ["Эрик Картман", "Кенни Маккормик", "Стэн Марш", "Кайл Брофловски", "Баттерс Стотч", "Рэнди Марш", "Мистер Гаррисон", "Шеф"];
-  
   const now = new Date();
   const charIndex = (now.getDate() + now.getHours()) % characters.length;
   const chosenCharacter = characters[charIndex];
@@ -92,6 +86,7 @@ async function generateAndPost(env, postType) {
     messages: [
       { role: "system", content: `Ты — админ канала "Южный Парк". Ты дерзкий, используешь черный юмор. 
 ВЕРНИ ОТВЕТ СТРОГО НА РУССКОМ ЯЗЫКЕ. НИКАКИХ АНГЛИЙСКИХ СЛОВ. 
+КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО вставлять ссылки, рекламу, криптовалюту. Твой ответ — это ТОЛЬКО текст.
 Верни ответ СТРОГО в JSON-формате: {"quote": "..."} или {"question": "...", "options": [...]}.` },
       { role: "user", content: prompt }
     ],
@@ -99,14 +94,14 @@ async function generateAndPost(env, postType) {
   });
   
   const rawResponse = aiResponse.response;
-  if (!rawResponse) throw new Error("Пустой ответ от ИИ: " + JSON.stringify(aiResponse));
+  if (!rawResponse) throw new Error("Пустой ответ от ИИ");
   
   let content;
   if (typeof rawResponse === 'object' && rawResponse !== null) {
     content = rawResponse; 
   } else {
     const jsonMatch = String(rawResponse).match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("Не удалось найти JSON в ответе: " + rawResponse);
+    if (!jsonMatch) throw new Error("Не удалось найти JSON: " + rawResponse);
     content = JSON.parse(jsonMatch[0]);
   }
   
@@ -130,11 +125,9 @@ async function generateAndPost(env, postType) {
 // ФУНКЦИЯ ОТВЕТА НА КОММЕНТАРИИ
 // ============================================================
 async function generateReply(env, userComment, userName, chatId, replyToMessageId) {
-  // ==========================================================
-  // ВНИМАНИЕ! ВСТАВЬ СВОЙ ТОКЕН БОТА И ТУТ ТОЖЕ:
-  // ==========================================================
-  const TELEGRAM_BOT_TOKEN = "8937064578:AAHuY-2CIFWOyhhkReIPmp98e3d4gw_-wTU";
-  // ==========================================================
+  const TELEGRAM_BOT_TOKEN = env.TELEGRAM_BOT_TOKEN;
+  if (!TELEGRAM_BOT_TOKEN) return;
+
   const TG_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 
   const characters = ["Эрик Картман", "Кенни Маккормик", "Стэн Марш", "Кайл Брофловски", "Баттерс Стотч", "Рэнди Марш", "Мистер Гаррисон", "Шеф"];
@@ -149,6 +142,7 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
     messages: [
       { role: "system", content: `Ты — персонаж из "Южного Парка". Отвечай коротко, дерзко, но по смыслу комментария. 
 ВЕРНИ ОТВЕТ СТРОГО НА РУССКОМ ЯЗЫКЕ. НИКАКИХ АНГЛИЙСКИХ СЛОВ. 
+ЗАПРЕЩЕНО вставлять ссылки и рекламу.
 Верни СТРОГО JSON: {"reply": "..."}.` },
       { role: "user", content: prompt }
     ],
