@@ -1,5 +1,5 @@
 // ============================================================
-// АВТОПОСТИНГ И ОТВЕТЫ НА КОММЕНТАРИИ (CLOUDFLARE WORKERS AI)
+// АВТОПОСТИНГ И ОТВЕТЫ НА КОММЕНТАРИИ (С ДИАГНОСТИКОЙ)
 // ============================================================
 
 export default {
@@ -36,16 +36,27 @@ export default {
       try {
         const update = await request.json();
         
-        if (update.message && update.message.text && !update.message.from.is_bot && !update.message.is_automatic_forward) {
-          const text = update.message.text;
-          const userName = update.message.from.first_name;
-          const chatId = update.message.chat.id;
-          const messageId = update.message.message_id;
-          
-          ctx.waitUntil(generateReply(env, text, userName, chatId, messageId));
+        // Логируем полученное сообщение
+        console.log("ПОЛУЧЕНО СООБЩЕНИЕ:", JSON.stringify(update));
+
+        // Проверяем, есть ли текст и не от бота ли он
+        if (update.message && update.message.text) {
+          if (!update.message.from.is_bot && !update.message.is_automatic_forward) {
+            const text = update.message.text;
+            const userName = update.message.from.first_name || "Друг";
+            const chatId = update.message.chat.id;
+            const messageId = update.message.message_id;
+            
+            console.log("ЗАПУСКАЕМ ОТВЕТ ДЛЯ:", userName);
+            ctx.waitUntil(generateReply(env, text, userName, chatId, messageId));
+          } else {
+            console.log("ПРОПУЩЕНО: Это сообщение от бота или автопересылка.");
+          }
+        } else {
+            console.log("ПРОПУЩЕНО: Нет текста в сообщении.");
         }
       } catch (e) {
-        console.log("Ошибка при чтении вебхука:", e);
+        console.log("КРИТИЧЕСКАЯ ОШИБКА ВЕБХУКА:", e.message);
       }
       return new Response("OK", { status: 200 });
     }
@@ -134,45 +145,70 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
   const prompt = `Пользователь по имени ${userName} написал комментарий: "${userComment}".
 Ответь ему от лица персонажа: ${chosenCharacter}. 1-3 предложения. Верни СТРОГО JSON: {"reply": "текст"}`;
 
-  const aiResponse = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
-    messages: [
-      { role: "system", content: `Ты — персонаж из "Южного Парка". Отвечай коротко, дерзко, но по смыслу. 
-ВЕРНИ ОТВЕТ СТРОГО НА РУССКОМ ЯЗЫКЕ. 
-Верни СТРОГО JSON: {"reply": "..."}.` },
-      { role: "user", content: prompt }
-    ],
-    response_format: { type: "json_object" }
-  });
-
-  const rawResponse = aiResponse.response;
-  if (!rawResponse) return;
+  console.log("ЗАПРОС К ИИ ДЛЯ ОТВЕТА...");
   
-  let content;
-  if (typeof rawResponse === 'object' && rawResponse !== null) {
-    content = rawResponse;
-  } else {
-    const jsonMatch = String(rawResponse).match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return;
-    content = JSON.parse(jsonMatch[0]);
+  try {
+      const aiResponse = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
+        messages: [
+          { role: "system", content: `Ты — персонаж из "Южного Парка". Отвечай коротко, дерзко, но по смыслу },
+. 
+    ВЕР         НИ ОТВ {ЕТ СТРОГО НА role РУ:ССКО "М ЯЗЫКЕ. 
+    Верни СТРОГО JSON: {"reply": "..."}.`user", content: prompt }
+        ],
+        response_format: { type: "json_object" }
+      });
+
+      console.log("ОТВЕТ ОТ ИИ ПОЛУЧЕН:", JSON.stringify(aiResponse));
+
+      const rawResponse = aiResponse.response;
+      if (!rawResponse) {
+          console.log("ОШИБКА: ИИ вернул пустоту.");
+          return;
+      }
+      
+      let content;
+      if (typeof rawResponse === 'object' && rawResponse !== null) {
+        content = rawResponse;
+      } else {
+        const jsonMatch = String(rawResponse).match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            console.log("ОШИБКА: Не удалось найти JSON в ответе ИИ.");
+            return;
+        }
+        content = JSON.parse(jsonMatch[0]);
+      }
+      
+      let replyText = content.reply;
+
+      if (!replyText) {
+          console.log("ОШИБКА: В JSON нет поля 'reply'.");
+          return;
+      }
+
+      // 🚨 ЖЕСТКИЙ ФИЛЬТР ОТ СПАМА
+      if (replyText.includes('http') || replyText.includes('t.me') || replyText.includes('@') || replyText.toLowerCase().includes('crypto') || replyText.toLowerCase().includes('loot')) {
+          replyText = "Я не рекламирую всякое дерьмо. Пиши по делу!";
+      }
+      
+      const formattedReply = `<b>${chosenCharacter}:</b>\n<blockquote>${replyText}</blockquote>`;
+
+      console.log("ОТПРАВЛЯЕМ В TELEGRAM:", formattedReply);
+
+      const tgRes = await fetch(`${TG_API}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: formattedReply,
+          parse_mode: "HTML",
+          reply_to_message_id: replyToMessageId
+        })
+      });
+
+      const tgData = await tgRes.json();
+      console.log("ОТВЕТ ОТ TELEGRAM API:", JSON.stringify(tgData));
+
+  } catch (e) {
+      console.log("ОШИБКА В ФУНКЦИИ ОТВЕТА:", e.message);
   }
-  
-  let replyText = content.reply;
-
-  // 🚨 ЖЕСТКИЙ ФИЛЬТР ОТ СПАМА (на уровне кода)
-  if (replyText.includes('http') || replyText.includes('t.me') || replyText.includes('@') || replyText.toLowerCase().includes('crypto') || replyText.toLowerCase().includes('loot')) {
-      replyText = "Я Картман, я не рекламирую всякое дерьмо. Пиши по делу!";
-  }
-  
-  const formattedReply = `<b>${chosenCharacter}:</b>\n<blockquote>${replyText}</blockquote>`;
-
-  await fetch(`${TG_API}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: formattedReply,
-      parse_mode: "HTML",
-      reply_to_message_id: replyToMessageId
-    })
-  });
 }
