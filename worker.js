@@ -3,7 +3,6 @@
 // ============================================================
 
 export default {
-  // 1. Блок расписания (Cron Trigger)
   async scheduled(event, env, ctx) {
     const now = new Date();
     const hour = now.getUTCHours(); 
@@ -18,11 +17,9 @@ export default {
     ctx.waitUntil(generateAndPost(env, postType));
   },
   
-  // 2. Блок для приема запросов
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     
-    // ЗАЩИТА ОТ СПАМА: Пост отправится только если в ссылке есть ?test=true
     if (request.method === 'GET') {
       if (url.searchParams.get('test') === 'true') {
         try {
@@ -35,12 +32,10 @@ export default {
       return new Response("Бот работает. Для теста добавь ?test=true", { status: 200 });
     }
     
-    // Обработка комментариев от Telegram
     if (request.method === 'POST') {
       try {
         const update = await request.json();
         
-        // Игнорируем автопересылки постов из канала и сообщения от ботов
         if (update.message && update.message.text && !update.message.from.is_bot && !update.message.is_automatic_forward) {
           const text = update.message.text;
           const userName = update.message.from.first_name;
@@ -164,7 +159,6 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
   let replyText = content.reply;
 
   // 🚨 ЖЕСТКИЙ ФИЛЬТР ОТ СПАМА (на уровне кода)
-  // Если ИИ вставил ссылку, @ или рекламу — мы стираем его ответ
   if (replyText.includes('http') || replyText.includes('t.me') || replyText.includes('@') || replyText.toLowerCase().includes('crypto') || replyText.toLowerCase().includes('loot')) {
       replyText = "Я Картман, я не рекламирую всякое дерьмо. Пиши по делу!";
   }
