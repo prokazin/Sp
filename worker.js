@@ -36,10 +36,8 @@ export default {
       try {
         const update = await request.json();
         
-        // Логируем полученное сообщение
         console.log("ПОЛУЧЕНО СООБЩЕНИЕ:", JSON.stringify(update));
 
-        // Проверяем, есть ли текст и не от бота ли он
         if (update.message && update.message.text) {
           if (!update.message.from.is_bot && !update.message.is_automatic_forward) {
             const text = update.message.text;
@@ -50,7 +48,7 @@ export default {
             console.log("ЗАПУСКАЕМ ОТВЕТ ДЛЯ:", userName);
             ctx.waitUntil(generateReply(env, text, userName, chatId, messageId));
           } else {
-            console.log("ПРОПУЩЕНО: Это сообщение от бота или автопересылка.");
+            console.log("ПРОПУЩЕНО: Сообщение от бота или автопересылка.");
           }
         } else {
             console.log("ПРОПУЩЕНО: Нет текста в сообщении.");
@@ -86,23 +84,27 @@ async function generateAndPost(env, postType) {
   let prompt = "";
   if (postType === 'poll') {
     prompt = `Придумай смешной, провокационный вопрос для опроса. Варианты ответов — от 2 до 4, короткие. Верни СТРОГО JSON: {"question": "...", "options": ["...", "..."]}`;
-  } else if (postType === 'joke') {
-    prompt = `Напиши дерзкую мысль или шутку от лица персонажа: ${chosenCharacter}. 1-2 предложения. Верни СТРОГО JSON: {"quote": "..."}`;
-  } else {
+  } else if }
+ (postType === 'joke') {
+    prompt = `Напиши дерзкую мысль или шутку от лица персонажа: ${ch osenCharacter}. });
+   
+1-2 предложения. Вер ни const СТРОГО JSON: {"quote": "..."}`;
+  } else raw {
     prompt = `Напиши короткую мысль-подводку от лица персонажа: ${chosenCharacter}. 1-2 предложения. Верни СТРОГО JSON: {"quote": "..."}`;
   }
   
   const aiResponse = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
     messages: [
-      { role: "system", content: `Ты — админ канала "Южный Парк". Ты дерзкий, используешь черный юмор. 
-ВЕРНИ ОТВЕТ СТРОГО НА РУССКОМ ЯЗЫКЕ. 
-Верни ответ СТРОГО в JSON-формате: {"quote": "..."} или {"question": "...", "options": [...]}.` },
-      { role: "user", content: prompt }
+      { 
+        role: "system", 
+        content: `Ты — админ канала "Южный Парк". Ты дерзкий, используешь черный юмор. ВЕРНИ ОТВЕТ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни ответ СТРОГО в JSON-формате: {"quote": "..."} или {"question": "...", "options": [...]}.` 
+      },
+      { 
+        role: "user", 
+        content: prompt 
+      }
     ],
-    response_format: { type: "json_object" }
-  });
-  
-  const rawResponse = aiResponse.response;
+    response_format: { type: "json_object"Response = aiResponse.response;
   if (!rawResponse) throw new Error("Пустой ответ от ИИ");
   
   let content;
@@ -142,18 +144,21 @@ async function generateReply(env, userComment, userName, chatId, replyToMessageI
   const characters = ["Эрик Картман", "Кенни Маккормик", "Стэн Марш", "Кайл Брофловски", "Баттерс Стотч", "Рэнди Марш", "Мистер Гаррисон", "Шеф"];
   const chosenCharacter = characters[Math.floor(Math.random() * characters.length)];
 
-  const prompt = `Пользователь по имени ${userName} написал комментарий: "${userComment}".
-Ответь ему от лица персонажа: ${chosenCharacter}. 1-3 предложения. Верни СТРОГО JSON: {"reply": "текст"}`;
+  const prompt = `Пользователь по имени ${userName} написал комментарий: "${userComment}". Ответь ему от лица персонажа: ${chosenCharacter}. 1-3 предложения. Верни СТРОГО JSON: {"reply": "текст"}`;
 
   console.log("ЗАПРОС К ИИ ДЛЯ ОТВЕТА...");
   
   try {
       const aiResponse = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
         messages: [
-          { role: "system", content: `Ты — персонаж из "Южного Парка". Отвечай коротко, дерзко, но по смыслу },
-. 
-    ВЕР         НИ ОТВ {ЕТ СТРОГО НА role РУ:ССКО "М ЯЗЫКЕ. 
-    Верни СТРОГО JSON: {"reply": "..."}.`user", content: prompt }
+          { 
+            role: "system", 
+            content: `Ты — персонаж из "Южного Парка". Отвечай коротко, дерзко, но по смыслу. ВЕРНИ ОТВЕТ СТРОГО НА РУССКОМ ЯЗЫКЕ. Верни СТРОГО JSON: {"reply": "..."}.` 
+          },
+          { 
+            role: "user", 
+            content: prompt 
+          }
         ],
         response_format: { type: "json_object" }
       });
