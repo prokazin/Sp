@@ -2,10 +2,11 @@ name = "sp"
 main = "worker.js"
 compatibility_date = "2024-10-18"
 
-# Эта строчка дает доступ к встроенному ИИ Cloudflare
 [ai]
 binding = "AI"
 
-# Расписание (4 раза в день по Гринвичу)
+[observability]
+enabled = true
+
 [triggers]
 crons = ["0 5,10,15,18 * * *"]
