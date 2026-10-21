@@ -82,14 +82,12 @@ async function generateAndPost(env, postType) {
   const chosenCharacter = characters[charIndex];
   
   let prompt = "";
+  
   if (postType === 'poll') {
     prompt = `Придумай смешной, провокационный вопрос для опроса. Варианты ответов — от 2 до 4, короткие. Верни СТРОГО JSON: {"question": "...", "options": ["...", "..."]}`;
-  } else if }
- (postType === 'joke') {
-    prompt = `Напиши дерзкую мысль или шутку от лица персонажа: ${ch osenCharacter}. });
-   
-1-2 предложения. Вер ни const СТРОГО JSON: {"quote": "..."}`;
-  } else raw {
+  } else if (postType === 'joke') {
+    prompt = `Напиши дерзкую мысль или шутку от лица персонажа: ${chosenCharacter}. 1-2 предложения. Верни СТРОГО JSON: {"quote": "..."}`;
+  } else {
     prompt = `Напиши короткую мысль-подводку от лица персонажа: ${chosenCharacter}. 1-2 предложения. Верни СТРОГО JSON: {"quote": "..."}`;
   }
   
@@ -104,7 +102,10 @@ async function generateAndPost(env, postType) {
         content: prompt 
       }
     ],
-    response_format: { type: "json_object"Response = aiResponse.response;
+    response_format: { type: "json_object" }
+  });
+  
+  const rawResponse = aiResponse.response;
   if (!rawResponse) throw new Error("Пустой ответ от ИИ");
   
   let content;
